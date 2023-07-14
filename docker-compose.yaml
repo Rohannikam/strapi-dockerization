@@ -1,0 +1,75 @@
+version: "3"
+
+x-strapi_volume: &strapi_volume
+  - ./headless/strapi:/srv/app/strapi
+
+x-strapi_db_volume: &strapi_db_volume
+  - ./headless/strapi-db:/var/lib/postgresql/data #using a volume
+  #- ./data:/var/lib/postgresql/data/ # if you want to use a bind folder
+
+services:
+  strapi:
+    container_name: strapi
+    # image: strapi/strapi:latest
+    build:
+      context: .
+      # dockerfile: Dockerfile.createproject        # COMMENT FOR RUNNING EXISTING STRAPI APP
+      dockerfile: Dockerfile.runproject             # COMMENT FOR CREATING STRAPI APP FOR FIRST TIME
+    restart: unless-stopped
+    # env_file: ./headless/.env
+    environment:
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: strapiDB
+      DATABASE_PORT: 5432
+      DATABASE_NAME: strapiDB
+      DATABASE_USERNAME: root
+      DATABASE_PASSWORD: admin
+      API_ACCESS_TOKEN: ede2ce2503a8bf7ee796a4f2dace5932881e9eb909daea6fd253e92686c9e5f7428d4c0425274d87e6a871683db25b8d8632823ec67b99d5fee899a5928cfe2412910316fec8ce319f7937b22f4d0df2dc36429fc9a84801f490663af7008762a782e0457481d611363a6c23bf876120412a0d93e2124fac7c8b393ca272ecd3
+      # JWT_SECRET: ${JWT_SECRET}
+      # ADMIN_JWT_SECRET: a04dd4d0e52a7c4437795e18cb18224e
+      # APP_KEYS: ${APP_KEYS}
+      NODE_ENV: development
+    volumes: *strapi_volume
+    ports:
+      - 1337:1337
+    networks:
+      - strapi
+    depends_on:
+      - strapiDB
+
+  strapiDB:
+    container_name: strapiDB
+    platform: linux/amd64 #for platform error on Apple M1 chips
+    restart: unless-stopped
+    # env_file: ./headless/.env
+    image: postgres:12.0-alpine
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: strapiDB
+    volumes: *strapi_db_volume
+    ports:
+      - 5432:5432
+    networks:
+      - strapi
+
+  strapi_pgadmin:
+    container_name: strapi_pgadmin_container
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: rohan@xecurify.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_PORT: 80
+    ports:
+      - 1338:80
+    # volumes: *strapi_pgadmin_volumes
+    user: root
+
+volumes:
+  strapi-data:
+
+networks:
+  strapi:
+    name: Strapi
+    driver: bridge
